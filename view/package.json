@@ -2,6 +2,7 @@
   "name": "view",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://storage.googleapis.com/mvc22101999-mvc-frontend",
   "dependencies": {
     "@emotion/react": "^11.10.8",
     "@emotion/styled": "^11.10.8",

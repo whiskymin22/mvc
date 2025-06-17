@@ -14,15 +14,14 @@ export default function Hero(){
                             lineHeight: 1.1,
                         }}
                     >
-                        Company<br/>Design
+                        Support My Family & I
                     </Typography>
                 </Grid>
                     
                 <Grid item xs={12} md={6}>
                     <Typography sx={{ fontSize:'1rem', lineHeight:1.6}}>
-                        We’ve distilled five decades of company-building experience
-                        into a discipline we call Company Design—the Sequoia way to
-                        start, build and scale enduring companies.
+                        As a close collaborator, I'd like to share some AMAZING products below. Please keep 
+                        these WONDERFUL places in mind when you have the change to visit them.
                     </Typography>
                 </Grid>
             </Grid>

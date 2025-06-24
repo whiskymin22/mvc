@@ -3,7 +3,9 @@ import Hero from '../components/Hero';
 import CardGrid from '../components/CardGrid';
 import { Avatar, Typography, Box, Container } from '@mui/material';
 import avatarImg from '../assets/20250526_Ghibli-Inspired Dinner Moment.png';
-
+import benduthuyenview1 from '../assets/Ben du thuyen view 1.png';
+import benduthuyenview2 from '../assets/Ben du thuyen view 2.png';
+import marinabeach from '../assets/Marina Beach.png';
 
 export default function Profile() {
   return (
@@ -48,8 +50,19 @@ export default function Profile() {
         </Container>
       </Box>
 
-      <Hero />
-      <CardGrid />
+      <Hero reverse/>
+      <CardGrid 
+        items={[
+          {type: 'image', src: benduthuyenview1, xs:12, md:12, href:"https://www.facebook.com/AnaMarinaNhaTrang"},
+          {type: 'image', src: benduthuyenview2, xs:12, md:6, href:"https://anamarina.com/"},
+          {type: 'image', src: marinabeach, xs:12, md:6, href:"https://www.facebook.com/marinabeachclubnt"},
+        ]}
+      />
+
+      <Hero 
+        title="My Family"
+        description="My family is my everything. I love them more than anything in the world. I'm so grateful to have them in my life."
+      />
     </>
   );
 }

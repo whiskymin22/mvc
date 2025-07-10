@@ -6,7 +6,7 @@ export default function Mailing() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // 
+        // ---------------------------------------------------------------------------------
         console.log('Subcribing:', email);
         setEmail('');
     };

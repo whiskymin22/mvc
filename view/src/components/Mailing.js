@@ -43,7 +43,7 @@ export default function Mailing() {
                         color: 'var(--text-color)'
                     }}
                 >
-                    Get the best stories from the Sequoia community 
+                    Send me your offer hihi 
                 </Typography>
 
                 <Box
@@ -77,7 +77,7 @@ export default function Mailing() {
                             textTransform: 'none',
                             px: 4,
                             bgcolor: 'var(--text-color)',
-                            color: 'common.white',
+                            color: 'var(--cds-color-black)',
                             '&:hover': {bgcolor: 'var(--text-color)'},
                         }}
                     >

@@ -2,6 +2,8 @@ import React from 'react';
 import Hero from '../components/Hero';
 import CardGrid from '../components/CardGrid';
 import Mailing from '../components/Mailing';
+import Footer from '../components/Footer';
+
 
 import { Avatar, Typography, Box, Container, Card } from '@mui/material';
 
@@ -75,8 +77,8 @@ export default function Profile() {
       />
       <CardGrid
         items={[
-          {type:'image', src: asteria1, xs:12, md:7.13, href:""},
-          {type:'image', src: asteria2, xs:12, md:4.87, href:""},
+          {type:'image', src: asteria1, xs:12, md:7.13, href:"https://www.facebook.com/AsteriaMuiNe.BeachResort/"},
+          {type:'image', src: asteria2, xs:12, md:4.87, href:"https://asteriamuineresort.com/"},
         ]}
       />
 
@@ -88,14 +90,15 @@ export default function Profile() {
 
       <CardGrid 
         items={[
-          {type:Image, src: selectum3, xs:12, md:6, href:""},
-          {type:Image, src:selectum2, xs:12, md:6, href:""},
+          {type:Image, src: selectum3, xs:12, md:6, href:"https://selectumnoaresort.com/"},
+          {type:Image, src:selectum2, xs:12, md:6, href:"https://www.facebook.com/SelectumNoaResortCamranh/"},
         ]}
       
       />
 
 
       <Mailing />
+      <Footer />
     </>
   );
 }

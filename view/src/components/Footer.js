@@ -20,8 +20,9 @@ export default function Footer(){
             component="footer"
             sx={{
                 backgroundColor: 'var(--footer-bg)',
-                color: 'common.white',
+                color: 'var(--cds-color-grey-500)',
                 py: {xs: 4, md: 6},
+                
             }}
         >
             <Container maxWidth="lg">
@@ -31,7 +32,7 @@ export default function Footer(){
                             ABOUT
                         </Typography>
                         {['Me', 'Jobs', 'Blog'].map((t) => (
-                            <Link key={t} href={`#${t}`} color="inherit" underline="hover">
+                            <Link key={t} href={`#${t}`} color="inherit" underline="hover" display="block">
                                 {t}
                             </Link>
                         ))}

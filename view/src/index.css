@@ -6,6 +6,10 @@
   --text-color: #F111111;
   --accent-color: #F1DCCD;
 
+
+  --cds-color-grey-500: #707072;
+  --cds-lolor-black: #111111;
+
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont,
                'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
                'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;

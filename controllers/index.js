@@ -1,9 +1,9 @@
-const formidable = require('formidable');
-const { endOfDay, startOfDay } = require('date-fns');
-const pool = require('../models/database');
-const { fieldValidator } = require('../utils/index');
+import formidable from 'formidable';
+import { endOfDay, startOfDay } from 'date-fns';
+import pool from '../models/database.js';
+import { fieldValidator } from '../utils/index.js';
 
-exports.create = (req, res) => {
+export const create = (req, res) => {
   const form = new formidable.IncomingForm();
   form.keepExtensions = true;
   form.parse(req, async (err, fields) => {
@@ -25,7 +25,7 @@ exports.create = (req, res) => {
     }
   });
 };
-exports.update = (req, res) => {
+export const update = (req, res) => {
   const form = new formidable.IncomingForm();
   const id = Number(req.params.id);
   form.keepExtensions = true;
@@ -50,7 +50,7 @@ exports.update = (req, res) => {
   });
 };
 
-exports.expenseById = async (req, res, next) => {
+export const expenseById = async (req, res, next) => {
   const id = Number(req.params.id);
   try {
     const expense = await pool.query(
@@ -66,7 +66,7 @@ exports.expenseById = async (req, res, next) => {
   }
 };
 
-exports.expenseByDate = async (req, res, next) => {
+export const expenseByDate = async (req, res, next) => {
   const expenseDate = Number(req.params.expenseDate);
   try {
     const expenseQuery = await pool.query(
@@ -89,9 +89,9 @@ exports.expenseByDate = async (req, res, next) => {
   }
 };
 
-exports.read = (req, res) => res.json(req.expense);
+export const read = (req, res) => res.json(req.expense);
 
-exports.remove = async (req, res) => {
+export const remove = async (req, res) => {
   const id = Number(req.params.id);
   try {
     await pool.query('DELETE FROM expenses WHERE expense_id = $1', [id]);

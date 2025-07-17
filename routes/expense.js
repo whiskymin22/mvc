@@ -1,17 +1,17 @@
-// require express and it's router component
-const express = require('express');
+// Import express and its router component
+import express from 'express';
 
 const router = express.Router();
 
-// require the middlewares and callback functions from the controller directory
-const {
+// Import the middlewares and callback functions from the controller directory
+import {
   create,
   expenseById,
   read,
   update,
   remove,
   expenseByDate,
-} = require('../controllers');
+} from '../controllers/index.js';
 
 // Create POST route to create an expense
 router.post('/expense/create', create);
@@ -24,4 +24,4 @@ router.delete('/expense/:id', remove);
 // Create GET route to read a list of expenses
 router.get('/expense/list/:expenseDate', expenseByDate);
 
-module.exports = router;
+export default router;

@@ -1,17 +1,52 @@
 #!/bin/bash
 
+# =============================================================================
 # Week 1 - Day 3-4: Network Infrastructure Setup
+# =============================================================================
 # This script creates the basic networking infrastructure for our application
+# including VPC, subnets, internet gateway, NAT gateways, and route tables
+#
+# PREREQUISITES:
+# 1. AWS CLI installed and configured (run: aws configure)
+# 2. Proper IAM permissions for VPC, EC2, and networking services
+# 3. jq installed for JSON parsing (run: sudo apt install jq)
+#
+# CUSTOMIZATION REQUIRED:
+# - Change AWS_REGION if you want to deploy in a different region
+# - Change APP_NAME if you want a different application name prefix
+# =============================================================================
 
-set -e
+set -e  # Exit on any error
 echo "🌐 Starting network infrastructure setup..."
 
-# Configuration
-export AWS_REGION="us-east-1"
-export APP_NAME="expense-tracker"
+# =============================================================================
+# CONFIGURATION SECTION - CUSTOMIZE THESE VALUES
+# =============================================================================
+# TODO: Change these values according to your preferences
+
+export AWS_REGION="us-east-1"        # 🔧 CHANGE THIS: Your preferred AWS region
+                                      # Options: us-east-1, us-west-2, eu-west-1, etc.
+
+export APP_NAME="expense-tracker"     # 🔧 CHANGE THIS: Your application name
+                                      # This will be used as prefix for all resources
+                                      # Use lowercase letters and hyphens only
+
+# =============================================================================
+# VALIDATION SECTION - DO NOT MODIFY
+# =============================================================================
+
+# Validate AWS CLI is configured
+if ! aws sts get-caller-identity &> /dev/null; then
+    echo "❌ Error: AWS CLI not configured. Please run 'aws configure' first."
+    exit 1
+fi
+
+echo "✅ AWS CLI configured for account: $(aws sts get-caller-identity --query Account --output text)"
+echo "✅ Using region: $AWS_REGION"
 
 echo "📋 Step 1: Creating VPC..."
 # Create VPC with DNS support
+# CIDR 10.0.0.0/16 provides 65,536 IP addresses (10.0.0.1 to 10.0.255.254)
 VPC_OUTPUT=$(aws ec2 create-vpc \
     --cidr-block 10.0.0.0/16 \
     --tag-specifications "ResourceType=vpc,Tags=[{Key=Name,Value=${APP_NAME}-vpc},{Key=Project,Value=${APP_NAME}}]" \
@@ -20,7 +55,7 @@ VPC_OUTPUT=$(aws ec2 create-vpc \
 export VPC_ID=$(echo $VPC_OUTPUT | jq -r '.Vpc.VpcId')
 echo "✅ VPC created: $VPC_ID"
 
-# Enable DNS hostnames
+# Enable DNS hostnames and resolution (required for RDS and ECS)
 aws ec2 modify-vpc-attribute --vpc-id $VPC_ID --enable-dns-hostnames
 aws ec2 modify-vpc-attribute --vpc-id $VPC_ID --enable-dns-support
 echo "✅ DNS support enabled for VPC"
@@ -39,11 +74,17 @@ aws ec2 attach-internet-gateway --vpc-id $VPC_ID --internet-gateway-id $IGW_ID
 echo "✅ Internet Gateway attached to VPC"
 
 echo "📋 Step 3: Creating Subnets..."
-# Get availability zones
+# Get the first two availability zones in the region
+# This ensures high availability across multiple data centers
 AZ1=$(aws ec2 describe-availability-zones --region $AWS_REGION --query 'AvailabilityZones[0].ZoneName' --output text)
 AZ2=$(aws ec2 describe-availability-zones --region $AWS_REGION --query 'AvailabilityZones[1].ZoneName' --output text)
 
-# Create Public Subnets (for Load Balancer)
+echo "📍 Using availability zones: $AZ1 and $AZ2"
+
+# =============================================================================
+# PUBLIC SUBNETS - For resources that need internet access (Load Balancer, NAT Gateway)
+# =============================================================================
+# Public Subnet 1: 10.0.1.0/24 (256 IP addresses: 10.0.1.1 to 10.0.1.254)
 PUBLIC_SUBNET_1=$(aws ec2 create-subnet \
     --vpc-id $VPC_ID \
     --cidr-block 10.0.1.0/24 \
@@ -51,6 +92,7 @@ PUBLIC_SUBNET_1=$(aws ec2 create-subnet \
     --tag-specifications "ResourceType=subnet,Tags=[{Key=Name,Value=${APP_NAME}-public-1a},{Key=Type,Value=Public},{Key=Project,Value=${APP_NAME}}]" \
     --query 'Subnet.SubnetId' --output text)
 
+# Public Subnet 2: 10.0.2.0/24 (256 IP addresses: 10.0.2.1 to 10.0.2.254)
 PUBLIC_SUBNET_2=$(aws ec2 create-subnet \
     --vpc-id $VPC_ID \
     --cidr-block 10.0.2.0/24 \
@@ -60,7 +102,10 @@ PUBLIC_SUBNET_2=$(aws ec2 create-subnet \
 
 echo "✅ Public subnets created: $PUBLIC_SUBNET_1, $PUBLIC_SUBNET_2"
 
-# Create Private Subnets (for ECS and RDS)
+# =============================================================================
+# PRIVATE SUBNETS - For resources that should NOT have direct internet access (ECS, RDS)
+# =============================================================================
+# Private Subnet 1: 10.0.3.0/24 (256 IP addresses: 10.0.3.1 to 10.0.3.254)
 PRIVATE_SUBNET_1=$(aws ec2 create-subnet \
     --vpc-id $VPC_ID \
     --cidr-block 10.0.3.0/24 \
@@ -68,6 +113,7 @@ PRIVATE_SUBNET_1=$(aws ec2 create-subnet \
     --tag-specifications "ResourceType=subnet,Tags=[{Key=Name,Value=${APP_NAME}-private-1a},{Key=Type,Value=Private},{Key=Project,Value=${APP_NAME}}]" \
     --query 'Subnet.SubnetId' --output text)
 
+# Private Subnet 2: 10.0.4.0/24 (256 IP addresses: 10.0.4.1 to 10.0.4.254)
 PRIVATE_SUBNET_2=$(aws ec2 create-subnet \
     --vpc-id $VPC_ID \
     --cidr-block 10.0.4.0/24 \

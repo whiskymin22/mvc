@@ -1,22 +1,45 @@
 #!/bin/bash
 
+# =============================================================================
 # Week 1 - Day 5-6: Security Groups Setup
+# =============================================================================
 # This script creates security groups with proper firewall rules
+# Security groups act as virtual firewalls for your AWS resources
+#
+# PREREQUISITES:
+# 1. Run 01-create-network.sh first to create VPC and subnets
+# 2. AWS CLI configured with proper permissions
+# 3. network-config.env file exists (created by previous script)
+#
+# CUSTOMIZATION:
+# - No changes needed - this script uses configuration from previous script
+# - The script automatically detects your public IP for bastion access
+# =============================================================================
 
-set -e
+set -e  # Exit on any error
 echo "🔒 Starting security groups setup..."
 
-# Load network configuration
+# =============================================================================
+# LOAD CONFIGURATION FROM PREVIOUS SCRIPT - DO NOT MODIFY
+# =============================================================================
+# Load network configuration created by 01-create-network.sh
 if [ -f "network-config.env" ]; then
     source network-config.env
     echo "✅ Network configuration loaded"
+    echo "   VPC ID: $VPC_ID"
+    echo "   App Name: $APP_NAME"
+    echo "   Region: $AWS_REGION"
 else
     echo "❌ network-config.env not found. Please run 01-create-network.sh first"
     exit 1
 fi
 
 echo "📋 Step 1: Creating ALB Security Group..."
-# Security Group for Application Load Balancer
+# =============================================================================
+# APPLICATION LOAD BALANCER SECURITY GROUP
+# Purpose: Controls traffic to/from the load balancer
+# Location: Public subnets
+# =============================================================================
 ALB_SG=$(aws ec2 create-security-group \
     --group-name "${APP_NAME}-alb-sg" \
     --description "Security group for Application Load Balancer" \
@@ -26,20 +49,26 @@ ALB_SG=$(aws ec2 create-security-group \
 
 echo "✅ ALB Security Group created: $ALB_SG"
 
-# Add rules for ALB (HTTP and HTTPS from anywhere)
+# INBOUND RULES for ALB:
+# Allow HTTP (port 80) from anywhere on the internet
 aws ec2 authorize-security-group-ingress \
     --group-id $ALB_SG \
     --protocol tcp \
     --port 80 \
-    --cidr 0.0.0.0/0
+    --cidr 0.0.0.0/0 \
+    --tag-specifications "ResourceType=security-group-rule,Tags=[{Key=Name,Value=HTTP-from-internet}]"
 
+# Allow HTTPS (port 443) from anywhere on the internet
 aws ec2 authorize-security-group-ingress \
     --group-id $ALB_SG \
     --protocol tcp \
     --port 443 \
-    --cidr 0.0.0.0/0
+    --cidr 0.0.0.0/0 \
+    --tag-specifications "ResourceType=security-group-rule,Tags=[{Key=Name,Value=HTTPS-from-internet}]"
 
-echo "✅ ALB Security Group rules added (HTTP/HTTPS from anywhere)"
+echo "✅ ALB Security Group rules added:"
+echo "   - HTTP (80) from anywhere (0.0.0.0/0)"
+echo "   - HTTPS (443) from anywhere (0.0.0.0/0)"
 
 echo "📋 Step 2: Creating ECS Security Group..."
 # Security Group for ECS Tasks

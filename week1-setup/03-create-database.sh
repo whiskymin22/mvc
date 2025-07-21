@@ -1,23 +1,61 @@
 #!/bin/bash
 
+# =============================================================================
 # Week 1 - Day 7: Database Setup
+# =============================================================================
 # This script creates RDS PostgreSQL instance and configures secrets
+# 
+# WHAT THIS SCRIPT DOES:
+# 1. Creates RDS subnet group for database placement
+# 2. Creates PostgreSQL RDS instance with Multi-AZ deployment
+# 3. Stores database credentials securely in AWS Parameter Store
+# 4. Creates helper scripts for database connection
+#
+# PREREQUISITES:
+# 1. Run 01-create-network.sh and 02-create-security-groups.sh first
+# 2. AWS CLI configured with RDS and SSM permissions
+# 3. network-config.env file exists
+#
+# CUSTOMIZATION OPTIONS:
+# - DB_INSTANCE_CLASS: Change database size (db.t3.micro, db.t3.small, etc.)
+# - DB_ALLOCATED_STORAGE: Change initial storage size (20GB default)
+# - BACKUP_RETENTION: Change backup retention period (7 days default)
+# - MULTI_AZ: Set to false for single-AZ (cheaper) deployment
+# =============================================================================
 
-set -e
+set -e  # Exit on any error
 echo "🗄️ Starting database setup..."
 
-# Load configuration
+# =============================================================================
+# LOAD CONFIGURATION FROM PREVIOUS SCRIPTS - DO NOT MODIFY
+# =============================================================================
 if [ -f "network-config.env" ]; then
     source network-config.env
     echo "✅ Configuration loaded"
+    echo "   VPC ID: $VPC_ID"
+    echo "   Private Subnets: $PRIVATE_SUBNET_1, $PRIVATE_SUBNET_2"
+    echo "   RDS Security Group: $RDS_SG"
 else
     echo "❌ network-config.env not found. Please run previous scripts first"
+    echo "   Required: 01-create-network.sh and 02-create-security-groups.sh"
     exit 1
 fi
 
-# Generate a secure random password
+# =============================================================================
+# DATABASE CONFIGURATION - CUSTOMIZE THESE VALUES IF NEEDED
+# =============================================================================
+DB_INSTANCE_CLASS="db.t3.micro"      # 🔧 CHANGE THIS: Database instance size
+                                      # Options: db.t3.micro, db.t3.small, db.t3.medium
+                                      # Note: t3.micro is cheapest but limited performance
+
+DB_ALLOCATED_STORAGE=20               # 🔧 CHANGE THIS: Initial storage in GB
+DB_MAX_ALLOCATED_STORAGE=100          # 🔧 CHANGE THIS: Max auto-scaling storage
+BACKUP_RETENTION=7                    # 🔧 CHANGE THIS: Backup retention in days
+MULTI_AZ=true                        # 🔧 CHANGE THIS: Set to false for single-AZ (cheaper)
+
+# Generate a secure random password (DO NOT MODIFY)
 DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
-echo "🔐 Generated secure database password"
+echo "🔐 Generated secure database password (will be stored in Parameter Store)"
 
 echo "📋 Step 1: Creating RDS Subnet Group..."
 # Create DB subnet group
@@ -30,28 +68,45 @@ aws rds create-db-subnet-group \
 echo "✅ RDS Subnet Group created"
 
 echo "📋 Step 2: Creating RDS PostgreSQL Instance..."
-# Create RDS PostgreSQL instance
+echo "   Instance Class: $DB_INSTANCE_CLASS"
+echo "   Storage: ${DB_ALLOCATED_STORAGE}GB (auto-scaling to ${DB_MAX_ALLOCATED_STORAGE}GB)"
+echo "   Multi-AZ: $MULTI_AZ"
+echo "   Backup Retention: $BACKUP_RETENTION days"
+
+# Create RDS PostgreSQL instance using configured values
 RDS_INSTANCE_ID="${APP_NAME}-db"
-aws rds create-db-instance \
+
+# Build the RDS creation command with conditional Multi-AZ
+RDS_CREATE_CMD="aws rds create-db-instance \
     --db-instance-identifier $RDS_INSTANCE_ID \
-    --db-instance-class db.t3.micro \
+    --db-instance-class $DB_INSTANCE_CLASS \
     --engine postgres \
     --engine-version 15.4 \
     --master-username dbadmin \
-    --master-user-password "$DB_PASSWORD" \
-    --allocated-storage 20 \
-    --max-allocated-storage 100 \
+    --master-user-password \"$DB_PASSWORD\" \
+    --allocated-storage $DB_ALLOCATED_STORAGE \
+    --max-allocated-storage $DB_MAX_ALLOCATED_STORAGE \
     --storage-type gp2 \
     --storage-encrypted \
     --vpc-security-group-ids $RDS_SG \
-    --db-subnet-group-name "${APP_NAME}-db-subnet-group" \
-    --backup-retention-period 7 \
-    --backup-window "07:00-09:00" \
-    --maintenance-window "sun:09:00-sun:10:00" \
-    --multi-az \
+    --db-subnet-group-name \"${APP_NAME}-db-subnet-group\" \
+    --backup-retention-period $BACKUP_RETENTION \
+    --backup-window \"07:00-09:00\" \
+    --maintenance-window \"sun:09:00-sun:10:00\" \
     --no-publicly-accessible \
     --db-name expenses \
-    --tags "Key=Name,Value=${APP_NAME}-db" "Key=Project,Value=${APP_NAME}" "Key=Environment,Value=development"
+    --tags \"Key=Name,Value=${APP_NAME}-db\" \"Key=Project,Value=${APP_NAME}\" \"Key=Environment,Value=development\""
+
+# Add Multi-AZ flag if enabled
+if [ "$MULTI_AZ" = "true" ]; then
+    RDS_CREATE_CMD="$RDS_CREATE_CMD --multi-az"
+    echo "   🔄 Multi-AZ deployment enabled (high availability + automatic failover)"
+else
+    echo "   ⚠️  Single-AZ deployment (cost optimized, no automatic failover)"
+fi
+
+# Execute the RDS creation command
+eval $RDS_CREATE_CMD
 
 echo "✅ RDS PostgreSQL instance creation initiated"
 echo "⏳ This will take 10-15 minutes. Waiting for database to be available..."

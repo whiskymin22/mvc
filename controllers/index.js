@@ -68,14 +68,22 @@ export const expenseById = async (req, res, next) => {
 
 export const expenseByDate = async (req, res, next) => {
   const expenseDate = Number(req.params.expenseDate);
+  console.log('Fetching expenses for date:', expenseDate);
+  console.log('Date object:', new Date(expenseDate));
+  
   try {
+    const startDate = startOfDay(new Date(expenseDate)).toISOString();
+    const endDate = endOfDay(new Date(expenseDate)).toISOString();
+    
+    console.log('Query date range:', { startDate, endDate });
+    
     const expenseQuery = await pool.query(
       'SELECT * FROM expenses WHERE created_at BETWEEN $1 AND $2',
-      [
-        startOfDay(new Date(expenseDate)).toISOString(),
-        endOfDay(new Date(expenseDate)).toISOString(),
-      ]
+      [startDate, endDate]
     );
+    
+    console.log('Query result:', expenseQuery.rows);
+    
     const expenseList = expenseQuery.rows;
     req.expense =
       expenseList.length > 0
@@ -83,8 +91,9 @@ export const expenseByDate = async (req, res, next) => {
         : `No expenses were found on this date.`;
     return next();
   } catch (error) {
+    console.error('Database error:', error);
     return res.status(400).json({
-      error,
+      error: error.message,
     });
   }
 };

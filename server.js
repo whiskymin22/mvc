@@ -1,10 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import pool from './models/database.js';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 8000;
 
 // Essential middleware
 app.use(cors());
@@ -21,6 +22,22 @@ app.get('/', (req, res) => {
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+app.get('/test-db', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW()');
+    res.json({ 
+      status: 'Database connected', 
+      timestamp: result.rows[0].now,
+      message: 'Database connection successful'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'Database error', 
+      error: error.message 
+    });
+  }
 });
 
 // Routes

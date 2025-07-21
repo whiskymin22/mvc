@@ -28,9 +28,15 @@ variable "app_name" {
 }
 
 variable "domain_name" {
-  description = "Domain name for the application"
+  description = "Domain name for the application (e.g., caohuuminh.com)"
   type        = string
   default     = ""
+}
+
+variable "create_domain_resources" {
+  description = "Whether to create domain-related resources (Route53, ACM)"
+  type        = bool
+  default     = false
 }
 
 # Data sources
@@ -501,6 +507,201 @@ output "s3_bucket_name" {
   value = aws_s3_bucket.frontend.bucket
 }
 
+# Route 53 and SSL Certificate (conditional)
+resource "aws_route53_zone" "main" {
+  count = var.create_domain_resources && var.domain_name != "" ? 1 : 0
+  
+  name = var.domain_name
+  
+  tags = {
+    Name = "${var.app_name}-zone"
+    Project = var.app_name
+  }
+}
+
+resource "aws_acm_certificate" "main" {
+  count = var.create_domain_resources && var.domain_name != "" ? 1 : 0
+  
+  domain_name       = var.domain_name
+  subject_alternative_names = [
+    "www.${var.domain_name}",
+    "api.${var.domain_name}",
+    "*.${var.domain_name}"
+  ]
+  validation_method = "DNS"
+  
+  tags = {
+    Name = "${var.app_name}-cert"
+    Project = var.app_name
+  }
+  
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# CloudFront Distribution with optional custom domain
+resource "aws_cloudfront_distribution" "frontend" {
+  origin {
+    domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
+    origin_id   = "S3-${aws_s3_bucket.frontend.bucket}"
+    
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+  
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "Frontend distribution for ${var.app_name}"
+  default_root_object = "index.html"
+  
+  # Use custom domain if provided and domain resources are enabled
+  aliases = var.create_domain_resources && var.domain_name != "" ? [
+    var.domain_name,
+    "www.${var.domain_name}"
+  ] : []
+  
+  default_cache_behavior {
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-${aws_s3_bucket.frontend.bucket}"
+    
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+    
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 3600
+    max_ttl                = 86400
+  }
+  
+  # Custom error response for SPA routing
+  custom_error_response {
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 300
+  }
+  
+  price_class = "PriceClass_100"
+  
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+  
+  # Use SSL certificate if domain is configured
+  viewer_certificate {
+    cloudfront_default_certificate = var.create_domain_resources && var.domain_name != "" ? false : true
+    acm_certificate_arn           = var.create_domain_resources && var.domain_name != "" ? aws_acm_certificate.main[0].arn : null
+    ssl_support_method            = var.create_domain_resources && var.domain_name != "" ? "sni-only" : null
+    minimum_protocol_version      = var.create_domain_resources && var.domain_name != "" ? "TLSv1.2_2021" : null
+  }
+  
+  tags = {
+    Name = "${var.app_name}-cloudfront"
+    Project = var.app_name
+  }
+}
+
+# Route53 records (conditional)
+resource "aws_route53_record" "frontend" {
+  count = var.create_domain_resources && var.domain_name != "" ? 1 : 0
+  
+  zone_id = aws_route53_zone.main[0].zone_id
+  name    = var.domain_name
+  type    = "A"
+  
+  alias {
+    name                   = aws_cloudfront_distribution.frontend.domain_name
+    zone_id                = aws_cloudfront_distribution.frontend.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "frontend_www" {
+  count = var.create_domain_resources && var.domain_name != "" ? 1 : 0
+  
+  zone_id = aws_route53_zone.main[0].zone_id
+  name    = "www.${var.domain_name}"
+  type    = "A"
+  
+  alias {
+    name                   = aws_cloudfront_distribution.frontend.domain_name
+    zone_id                = aws_cloudfront_distribution.frontend.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "api" {
+  count = var.create_domain_resources && var.domain_name != "" ? 1 : 0
+  
+  zone_id = aws_route53_zone.main[0].zone_id
+  name    = "api.${var.domain_name}"
+  type    = "A"
+  
+  alias {
+    name                   = aws_lb.main.dns_name
+    zone_id                = aws_lb.main.zone_id
+    evaluate_target_health = true
+  }
+}
+
+# Outputs
+output "vpc_id" {
+  value = aws_vpc.main.id
+}
+
+output "rds_endpoint" {
+  value = aws_db_instance.main.endpoint
+}
+
+output "ecr_repository_url" {
+  value = aws_ecr_repository.main.repository_url
+}
+
+output "alb_dns_name" {
+  value = aws_lb.main.dns_name
+}
+
+output "s3_bucket_name" {
+  value = aws_s3_bucket.frontend.bucket
+}
+
 output "s3_website_endpoint" {
   value = aws_s3_bucket_website_configuration.frontend.website_endpoint
+}
+
+output "cloudfront_domain_name" {
+  value = aws_cloudfront_distribution.frontend.domain_name
+}
+
+output "cloudfront_distribution_id" {
+  value = aws_cloudfront_distribution.frontend.id
+}
+
+# Domain-specific outputs
+output "domain_name" {
+  value = var.domain_name != "" ? var.domain_name : "Not configured"
+}
+
+output "frontend_url" {
+  value = var.create_domain_resources && var.domain_name != "" ? "https://${var.domain_name}" : "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
+}
+
+output "api_url" {
+  value = var.create_domain_resources && var.domain_name != "" ? "https://api.${var.domain_name}" : "http://${aws_lb.main.dns_name}"
+}
+
+output "route53_name_servers" {
+  value = var.create_domain_resources && var.domain_name != "" ? aws_route53_zone.main[0].name_servers : []
 }

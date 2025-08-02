@@ -1,0 +1,59 @@
+# =============================================================================
+# Terraform Variables Configuration
+# =============================================================================
+# Copy this file to terraform.tfvars and customize the values
+
+# Basic Configuration
+aws_region = "us-east-1"
+app_name   = "expense-tracker"
+
+# =============================================================================
+# Domain Configuration - CUSTOMIZE FOR YOUR DOMAIN
+# =============================================================================
+
+# Your custom domain name (e.g., caohuuminh.com)
+domain_name = "caohuuminh.com"
+
+# Set to true to create Route53 hosted zone and SSL certificates
+# Set to false if you want to manage domain separately or don't have a domain
+create_domain_resources = true
+
+# =============================================================================
+# Example Configurations
+# =============================================================================
+
+# Option 1: With Custom Domain (Production)
+# domain_name = "caohuuminh.com"
+# create_domain_resources = true
+
+# Option 2: Without Custom Domain (Development)
+# domain_name = ""
+# create_domain_resources = false
+
+# =============================================================================
+# Advanced Configuration (Optional)
+# =============================================================================
+
+# Uncomment and modify these if you need different settings
+
+# Database configuration
+# db_instance_class = "db.t3.micro"
+# db_allocated_storage = 20
+# multi_az = true
+
+# Environment tag
+# environment = "production"
+
+# =============================================================================
+# Cost Optimization Examples
+# =============================================================================
+
+# Development/Learning Setup (Cheaper)
+# create_domain_resources = false  # Skip domain costs
+# multi_az = false                 # Single AZ database (50% cheaper)
+# db_instance_class = "db.t3.micro" # Smallest database
+
+# Production Setup (Recommended)
+# create_domain_resources = true   # Full domain setup
+# multi_az = true                  # High availability
+# db_instance_class = "db.t3.small" # Better performance

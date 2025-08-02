@@ -1,0 +1,27 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:*",
+        "ecs:*",
+        "ecr:*",
+        "rds:*",
+        "s3:*",
+        "cloudfront:*",
+        "route53:*",
+        "acm:*",
+        "elasticloadbalancing:*",
+        "logs:*",
+        "ssm:*",
+        "iam:GetRole",
+        "iam:CreateRole",
+        "iam:AttachRolePolicy",
+        "iam:PassRole",
+        "application-autoscaling:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

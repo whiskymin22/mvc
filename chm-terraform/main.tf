@@ -7,7 +7,3 @@ tarraform {
         }
     }
 }
-
-provider "aws" {
-  region = var.region
-}
